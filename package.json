@@ -1,0 +1,26 @@
+{
+  "name": "misaka-network-tickets",
+  "version": "1.0.0",
+  "description": "Bot profissional de tickets para vendas - Misaka Network",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "deploy:commands": "node scripts/register-commands.js guild",
+    "deploy:global": "node scripts/register-commands.js global",
+    "check": "node --check src/index.js && node --check src/config.js && node --check src/events/ready.js && node --check src/events/interactionCreate.js && node --check src/events/guildMemberAdd.js && node --check src/utils/logger.js && node --check src/utils/interactionResponse.js && node --check src/utils/atomicJson.js && node --check src/utils/validators.js && node --check src/utils/sanitize.js && node --check src/utils/embeds.js && node --check src/utils/permissions.js && node --check src/services/ticketService.js && node --check src/services/panelService.js && node --check src/services/welcomeService.js && node --check src/services/transcriptService.js && node --check src/services/permissionService.js && node --check src/repositories/guildRepository.js && node --check src/repositories/panelRepository.js && node --check src/repositories/ticketRepository.js && node --check src/repositories/counterRepository.js && node --check src/commands/ticket/index.js && node --check src/commands/welcome/index.js && echo Syntax check passed",
+    "test": "node tests/run.js",
+    "diagnose": "node scripts/diagnose.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {},
+  "keywords": ["discord", "bot", "tickets", "genshin"],
+  "author": "Misaka Network",
+  "license": "MIT"
+}
