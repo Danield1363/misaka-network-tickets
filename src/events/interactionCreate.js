@@ -1117,13 +1117,13 @@ async function handlePanelEditSubmit(interaction, panelId) {
   const title = interaction.fields.getTextInputValue('panel_title');
   const description = interaction.fields.getTextInputValue('panel_description');
   const color = interaction.fields.getTextInputValue('panel_color');
-  const buttonText = interaction.fields.getTextInputValue('panel_button_text');
+  const imageUrl = interaction.fields.getTextInputValue('panel_image_url');
 
   if (name) updates.name = name;
   if (title) updates.title = title;
   if (description) updates.description = description;
   if (color) updates.color = color;
-  if (buttonText) updates.buttonText = buttonText;
+  if (imageUrl !== undefined) updates.imageUrl = imageUrl || null;
 
   await panelRepository.updatePanel(panelId, updates);
 
@@ -1188,18 +1188,7 @@ async function handleMessageEditSubmit(interaction, panelId) {
 async function handleSelectMenu(interaction) {
   const customId = interaction.customId;
 
-  try {
-    await interaction.deferUpdate();
-  } catch {
-    // Já respondido ou interação expirada
-    return;
-  }
-
-  if (customId === 'ticket_config_menu') {
-    await handleTicketConfigSelect(interaction);
-    return;
-  }
-
+  // Handlers que precisam mostrar modal NÃO devem usar deferUpdate
   if (customId === 'panel_edit_select') {
     await handlePanelEditSelect(interaction);
     return;
@@ -1210,11 +1199,6 @@ async function handleSelectMenu(interaction) {
     return;
   }
 
-  if (customId === 'panel_delete_select') {
-    await handlePanelDeleteSelect(interaction);
-    return;
-  }
-
   if (customId === 'form_select_panel') {
     await handleFormSelectPanel(interaction);
     return;
@@ -1222,6 +1206,23 @@ async function handleSelectMenu(interaction) {
 
   if (customId === 'msg_select_panel') {
     await handleMessageSelectPanel(interaction);
+    return;
+  }
+
+  // Para todos os outros, deferUpdate primeiro
+  try {
+    await interaction.deferUpdate();
+  } catch {
+    return;
+  }
+
+  if (customId === 'ticket_config_menu') {
+    await handleTicketConfigSelect(interaction);
+    return;
+  }
+
+  if (customId === 'panel_delete_select') {
+    await handlePanelDeleteSelect(interaction);
     return;
   }
 
@@ -1299,7 +1300,7 @@ async function handlePanelEditSelect(interaction) {
   const panelId = interaction.values[0];
   const panel = await panelRepository.getPanel(panelId);
   if (!panel) {
-    return interaction.update({ content: '❌ Painel não encontrado.', components: [] });
+    return interaction.reply({ content: '❌ Painel não encontrado.', ephemeral: true });
   }
 
   const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
@@ -1336,10 +1337,11 @@ async function handlePanelEditSelect(interaction) {
     .setStyle(TextInputStyle.Short)
     .setRequired(false);
 
-  const buttonInput = new TextInputBuilder()
-    .setCustomId('panel_button_text')
-    .setLabel('Texto do botão')
-    .setValue(panel.buttonText || 'Abrir ticket')
+  const imageInput = new TextInputBuilder()
+    .setCustomId('panel_image_url')
+    .setLabel('URL da imagem/banner (opcional)')
+    .setValue(panel.imageUrl || '')
+    .setPlaceholder('https://exemplo.com/imagem.png')
     .setStyle(TextInputStyle.Short)
     .setRequired(false);
 
@@ -1348,7 +1350,7 @@ async function handlePanelEditSelect(interaction) {
     new ActionRowBuilder().addComponents(titleInput),
     new ActionRowBuilder().addComponents(descInput),
     new ActionRowBuilder().addComponents(colorInput),
-    new ActionRowBuilder().addComponents(buttonInput),
+    new ActionRowBuilder().addComponents(imageInput),
   );
 
   await interaction.showModal(modal);
@@ -1405,7 +1407,7 @@ async function handleFormSelectPanel(interaction) {
   const panelId = interaction.values[0];
   const panel = await panelRepository.getPanel(panelId);
   if (!panel) {
-    return interaction.editReply({ content: '❌ Painel não encontrado.', components: [] });
+    return interaction.reply({ content: '❌ Painel não encontrado.', ephemeral: true });
   }
 
   const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
@@ -1456,7 +1458,7 @@ async function handleMessageSelectPanel(interaction) {
   const panelId = interaction.values[0];
   const panel = await panelRepository.getPanel(panelId);
   if (!panel) {
-    return interaction.update({ content: '❌ Painel não encontrado.', components: [] });
+    return interaction.reply({ content: '❌ Painel não encontrado.', ephemeral: true });
   }
 
   const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
