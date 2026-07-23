@@ -1194,6 +1194,12 @@ async function handleSelectMenu(interaction) {
     return;
   }
 
+  if (customId.startsWith('panel_edit_option_')) {
+    const panelId = customId.replace('panel_edit_option_', '');
+    await handlePanelEditOption(interaction, panelId);
+    return;
+  }
+
   if (customId === 'panel_publish_select') {
     await handlePanelPublishSelect(interaction);
     return;
@@ -1240,12 +1246,6 @@ async function handleSelectMenu(interaction) {
   if (customId.startsWith('panel_config_role_')) {
     const panelId = customId.replace('panel_config_role_', '');
     await handlePanelConfigRole(interaction, panelId);
-    return;
-  }
-
-  if (customId.startsWith('panel_edit_option_')) {
-    const panelId = customId.replace('panel_edit_option_', '');
-    await handlePanelEditOption(interaction, panelId);
     return;
   }
 
