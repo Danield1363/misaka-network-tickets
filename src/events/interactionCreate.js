@@ -1243,6 +1243,12 @@ async function handleSelectMenu(interaction) {
     return;
   }
 
+  if (customId.startsWith('panel_edit_option_')) {
+    const panelId = customId.replace('panel_edit_option_', '');
+    await handlePanelEditOption(interaction, panelId);
+    return;
+  }
+
   if (customId === 'config_log_channel') {
     const channelId = interaction.values[0];
     const guildRepository = require('../repositories/guildRepository');
@@ -1303,57 +1309,154 @@ async function handlePanelEditSelect(interaction) {
     return interaction.reply({ content: '❌ Painel não encontrado.', ephemeral: true });
   }
 
-  const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+  const { ActionRowBuilder, StringSelectMenuBuilder, ChannelSelectMenuBuilder, RoleSelectMenuBuilder, ChannelType } = require('discord.js');
 
-  const modal = new ModalBuilder()
-    .setCustomId(`panel_edit_modal_${panelId}`)
-    .setTitle(`Editar - ${panel.name}`);
+  const selectMenu = new StringSelectMenuBuilder()
+    .setCustomId(`panel_edit_option_${panelId}`)
+    .setPlaceholder('O que deseja editar?')
+    .addOptions([
+      { label: 'Informações básicas', value: 'basic', description: 'Nome, título, descrição, cor, imagem' },
+      { label: 'Categoria dos tickets', value: 'category', description: 'Onde os tickets serão criados' },
+      { label: 'Cargo da equipe', value: 'role', description: 'Quem pode atender os tickets' },
+      { label: 'Canal de publicação', value: 'publish_channel', description: 'Onde o painel será exibido' },
+      { label: 'Ativar/Desativar', value: 'toggle', description: `${panel.enabled ? 'Desativar' : 'Ativar'} o painel` },
+    ]);
 
-  const nameInput = new TextInputBuilder()
-    .setCustomId('panel_name')
-    .setLabel('Nome interno')
-    .setValue(panel.name)
-    .setStyle(TextInputStyle.Short)
-    .setRequired(true);
+  const row = new ActionRowBuilder().addComponents(selectMenu);
 
-  const titleInput = new TextInputBuilder()
-    .setCustomId('panel_title')
-    .setLabel('Título do embed')
-    .setValue(panel.title)
-    .setStyle(TextInputStyle.Short)
-    .setRequired(true);
+  await interaction.reply({
+    content: `📋 **Editando painel: ${panel.name}**\n\nSelecione o que deseja alterar:`,
+    components: [row],
+    ephemeral: true,
+  });
+}
 
-  const descInput = new TextInputBuilder()
-    .setCustomId('panel_description')
-    .setLabel('Descrição do embed')
-    .setValue(panel.description)
-    .setStyle(TextInputStyle.Paragraph)
-    .setRequired(true);
+async function handlePanelEditOption(interaction, panelId) {
+  const option = interaction.values[0];
+  const panel = await panelRepository.getPanel(panelId);
+  if (!panel) {
+    return interaction.reply({ content: '❌ Painel não encontrado.', ephemeral: true });
+  }
 
-  const colorInput = new TextInputBuilder()
-    .setCustomId('panel_color')
-    .setLabel('Cor (hex)')
-    .setValue(panel.color || '#2b2d31')
-    .setStyle(TextInputStyle.Short)
-    .setRequired(false);
+  if (option === 'basic') {
+    const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 
-  const imageInput = new TextInputBuilder()
-    .setCustomId('panel_image_url')
-    .setLabel('URL da imagem/banner (opcional)')
-    .setValue(panel.imageUrl || '')
-    .setPlaceholder('https://exemplo.com/imagem.png')
-    .setStyle(TextInputStyle.Short)
-    .setRequired(false);
+    const modal = new ModalBuilder()
+      .setCustomId(`panel_edit_modal_${panelId}`)
+      .setTitle(`Editar - ${panel.name}`);
 
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(nameInput),
-    new ActionRowBuilder().addComponents(titleInput),
-    new ActionRowBuilder().addComponents(descInput),
-    new ActionRowBuilder().addComponents(colorInput),
-    new ActionRowBuilder().addComponents(imageInput),
-  );
+    const nameInput = new TextInputBuilder()
+      .setCustomId('panel_name')
+      .setLabel('Nome interno')
+      .setValue(panel.name)
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true);
 
-  await interaction.showModal(modal);
+    const titleInput = new TextInputBuilder()
+      .setCustomId('panel_title')
+      .setLabel('Título do embed')
+      .setValue(panel.title)
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true);
+
+    const descInput = new TextInputBuilder()
+      .setCustomId('panel_description')
+      .setLabel('Descrição do embed')
+      .setValue(panel.description)
+      .setStyle(TextInputStyle.Paragraph)
+      .setRequired(true);
+
+    const colorInput = new TextInputBuilder()
+      .setCustomId('panel_color')
+      .setLabel('Cor (hex)')
+      .setValue(panel.color || '#2b2d31')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(false);
+
+    const imageInput = new TextInputBuilder()
+      .setCustomId('panel_image_url')
+      .setLabel('URL da imagem/banner')
+      .setValue(panel.imageUrl || '')
+      .setPlaceholder('https://exemplo.com/imagem.png')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(false);
+
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(nameInput),
+      new ActionRowBuilder().addComponents(titleInput),
+      new ActionRowBuilder().addComponents(descInput),
+      new ActionRowBuilder().addComponents(colorInput),
+      new ActionRowBuilder().addComponents(imageInput),
+    );
+
+    await interaction.showModal(modal);
+    return;
+  }
+
+  if (option === 'category') {
+    const { ActionRowBuilder, ChannelSelectMenuBuilder, ChannelType } = require('discord.js');
+
+    const select = new ChannelSelectMenuBuilder()
+      .setCustomId(`panel_config_channel_${panelId}`)
+      .setPlaceholder('Selecione a categoria para tickets')
+      .setChannelTypes(ChannelType.GuildCategory);
+
+    const row = new ActionRowBuilder().addComponents(select);
+
+    await interaction.update({
+      content: '📂 **Selecione a categoria onde os tickets serão criados:**',
+      components: [row],
+    });
+    return;
+  }
+
+  if (option === 'role') {
+    const { ActionRowBuilder, RoleSelectMenuBuilder } = require('discord.js');
+
+    const select = new RoleSelectMenuBuilder()
+      .setCustomId(`panel_config_role_${panelId}`)
+      .setPlaceholder('Selecione o cargo da equipe');
+
+    const row = new ActionRowBuilder().addComponents(select);
+
+    await interaction.update({
+      content: '👥 **Selecione o cargo da equipe que atenderá os tickets:**',
+      components: [row],
+    });
+    return;
+  }
+
+  if (option === 'publish_channel') {
+    const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+
+    const modal = new ModalBuilder()
+      .setCustomId(`panel_publish_channel_${panelId}`)
+      .setTitle('Publicar Painel');
+
+    const channelInput = new TextInputBuilder()
+      .setCustomId('publish_channel_id')
+      .setLabel('ID do canal onde publicar')
+      .setPlaceholder('Cole o ID do canal')
+      .setValue(panel.channelId || '')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true);
+
+    modal.addComponents(new ActionRowBuilder().addComponents(channelInput));
+
+    await interaction.showModal(modal);
+    return;
+  }
+
+  if (option === 'toggle') {
+    const newEnabled = !panel.enabled;
+    await panelRepository.updatePanel(panelId, { enabled: newEnabled });
+
+    await interaction.update({
+      content: `✅ Painel ${newEnabled ? 'ativado' : 'desativado'} com sucesso!`,
+      components: [],
+    });
+    return;
+  }
 }
 
 async function handlePanelPublishSelect(interaction) {
