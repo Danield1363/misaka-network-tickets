@@ -1029,6 +1029,12 @@ async function handleModal(interaction) {
     await handleMessageEditSubmit(interaction, panelId);
     return;
   }
+
+  if (customId.startsWith('panel_publish_channel_')) {
+    const panelId = customId.replace('panel_publish_channel_', '');
+    await handlePanelPublishChannelSubmit(interaction, panelId);
+    return;
+  }
 }
 
 async function handleTicketFormSubmit(interaction, panelId) {
@@ -1660,44 +1666,42 @@ async function handlePanelConfigSelect(interaction) {
   }
 }
 
+async function handlePanelPublishChannelSubmit(interaction, panelId) {
+  const channelId = interaction.fields.getTextInputValue('publish_channel_id');
+
+  await safeDeferReply(interaction);
+
+  try {
+    const channel = await interaction.guild.channels.fetch(channelId);
+    if (!channel) {
+      return safeEditReply(interaction, { content: '❌ Canal não encontrado. Verifique se o ID está correto.' });
+    }
+
+    const panel = await panelRepository.getPanel(panelId);
+    if (!panel) {
+      return safeEditReply(interaction, { content: '❌ Painel não encontrado.' });
+    }
+
+    if (!panel.categoryId) {
+      return safeEditReply(interaction, { content: '❌ Configure a categoria do painel antes de publicar. Use /ticket painel-editar → Categoria dos tickets.' });
+    }
+
+    if (!panel.teamRoleId) {
+      return safeEditReply(interaction, { content: '❌ Configure o cargo da equipe antes de publicar. Use /ticket painel-editar → Cargo da equipe.' });
+    }
+
+    await panelRepository.updatePanel(panelId, { channelId });
+    await panelService.publishPanel(interaction.client, panelId);
+
+    await safeEditReply(interaction, { content: `✅ Painel publicado em <#${channelId}>` });
+  } catch (err) {
+    logger.error('Erro ao publicar painel:', err.message);
+    await safeEditReply(interaction, { content: `❌ Erro: ${err.message}` });
+  }
+}
+
 async function handlePanelConfigAction(interaction) {
   const customId = interaction.customId;
-
-  if (customId.startsWith('panel_publish_channel_')) {
-    const panelId = customId.replace('panel_publish_channel_', '');
-    const channelId = interaction.fields.getTextInputValue('publish_channel_id');
-
-    await safeDeferReply(interaction);
-
-    try {
-      const channel = await interaction.guild.channels.fetch(channelId);
-      if (!channel) {
-        return safeEditReply(interaction, { content: '❌ Canal não encontrado. Verifique se o ID está correto.' });
-      }
-
-      const panel = await panelRepository.getPanel(panelId);
-      if (!panel) {
-        return safeEditReply(interaction, { content: '❌ Painel não encontrado.' });
-      }
-
-      if (!panel.categoryId) {
-        return safeEditReply(interaction, { content: '❌ Configure a categoria do painel antes de publicar. Use /ticket painel-editar.' });
-      }
-
-      if (!panel.teamRoleId) {
-        return safeEditReply(interaction, { content: '❌ Configure o cargo da equipe antes de publicar. Use /ticket painel-editar.' });
-      }
-
-      await panelRepository.updatePanel(panelId, { channelId });
-      await panelService.publishPanel(interaction.client, panelId);
-
-      await safeEditReply(interaction, { content: `✅ Painel publicado em <#${channelId}>` });
-    } catch (err) {
-      logger.error('Erro ao publicar painel:', err.message);
-      await safeEditReply(interaction, { content: `❌ Erro: ${err.message}` });
-    }
-    return;
-  }
 }
 
 async function handleWelcomeCommand(interaction, subcommand) {
